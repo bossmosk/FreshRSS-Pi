@@ -1,8 +1,3 @@
-[![Build Status][travis-badge]][travis-link]
-[![Liberapay donations](https://img.shields.io/liberapay/receives/FreshRSS.svg?logo=liberapay)](https://liberapay.com/FreshRSS/donate)
-
-* Read this document on [github.com/FreshRSS/FreshRSS/](https://github.com/FreshRSS/FreshRSS/blob/edge/README.md) to get the correct links and pictures.
-* [Version française](README.fr.md)
 
 # FreshRSS
 
@@ -94,8 +89,8 @@ Then copy in the below code to: run the php actualize_script every 15 minutes fo
 
 You can change the sintax if you want, plenty of resources online to learn it.
 
-*/15 * * * * 
-sudo -u www-data php -f /srv/FreshRSS/app/actualize_script.php > /tmp/FreshRSS.log 2>&1
+`*/15 * * * * 
+sudo -u www-data php -f /srv/FreshRSS/app/actualize_script.php > /tmp/FreshRSS.log 2>&1`
 
 First run
 

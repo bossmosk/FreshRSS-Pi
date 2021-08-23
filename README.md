@@ -6,144 +6,108 @@
 
 # FreshRSS
 
-FreshRSS is a self-hosted RSS feed aggregator like [Leed](https://github.com/LeedRSS/Leed) or [Kriss Feed](https://tontof.net/kriss/feed/).
+The setup
 
-It is lightweight, easy to work with, powerful, and customizable.
+    Raspberry Pi running Raspian Lite (host & os)
+    FreshRSS (aggregator)
+    Lighttpd (web server)
+    Kill the newsletter (service to transform email newsletters into RSS – awesome stuff)
+    Reeder 5 (local client reader for iOS and MacOS), browser view works just as fine.
 
-It is a multi-user application with an anonymous reading mode. It supports custom tags.
-There is an API for (mobile) clients, and a [Command-Line Interface](cli/README.md).
+Assumptions
 
-Thanks to the [WebSub](https://www.w3.org/TR/websub/) standard (formerly [PubSubHubbub](https://github.com/pubsubhubbub/PubSubHubbub)),
-FreshRSS is able to receive instant push notifications from compatible sources, such as [Mastodon](https://joinmastodon.org), [Friendica](https://friendi.ca), [WordPress](https://wordpress.org/plugins/pubsubhubbub/), Blogger, FeedBurner, etc.
+    You have SSH and sudo to the Pi
+    You have git and know basic comands
+    You have Lighttpd, Sqllite3, php running from a pi-hole install
+    You know few basics around the CLI
 
-Finally, it supports [extensions](#extensions) for further tuning.
+Downloading
 
-Feature requests, bug reports, and other contributions are welcome. The best way to contribute is to [open an issue on GitHub](https://github.com/FreshRSS/FreshRSS/issues).
-We are a friendly community.
+Let’s get started with updating the system first (you might want to do a reboot if it has been a while since you updated, just saying).
 
-* Official website: https://freshrss.org
-* Demo: https://demo.freshrss.org/
-* License: [GNU AGPL 3](https://www.gnu.org/licenses/agpl-3.0.html)
+sudo apt-get update && sudo apt-get dist-upgrade
 
-![FreshRSS logo](docs/img/FreshRSS-logo.png)
+Get all the software we need from the repo (you should have most of the php packages from the pi-hole install anyways)
 
-# Disclaimer
+sudo apt install php php-curl php-gmp php-intl php-mbstring php-sqlite3 php-xml php-zip
 
-FreshRSS comes with absolutely no warranty.
+Side note, if you want to check what is already installed for php before running the line above, run this
 
-![FreshRSS screenshot](docs/img/FreshRSS-screenshot.png)
+dpkg --get-selections | grep -e php
 
-# [Documentation](https://freshrss.github.io/FreshRSS/en/)
+Ok, prep done mostly, once you launch FreshRSS for the first time it will check for dependencies, you might need to install something new.. it is in active development thankfully!
 
-* [User documentation](https://freshrss.github.io/FreshRSS/en/users/02_First_steps.html), where you can discover all the possibilities offered by FreshRSS
-* [Administrator documentation](https://freshrss.github.io/FreshRSS/en/admins/01_Index.html) for detailed installation and maintenance related tasks
-* [Developer documentation](https://freshrss.github.io/FreshRSS/en/developers/01_Index.html) to guide you in the source code of FreshRSS and to help you if you want to contribute
-* [Contributor guidelines](https://freshrss.github.io/FreshRSS/en/contributing.html) for those who want to help improve FreshRSS
+Time for FreshRSS, I’m going to download the git master branch in /srv/
 
-# Requirements
+cd /srv/ && sudo git clone https://github.com/FreshRSS/FreshRSS.git
 
-* A recent browser like Firefox / IceCat, Edge, Chromium / Chrome, Opera, Safari.
-	* Works on mobile (except a few features)
-* Light server running Linux or Windows
-	* It even works on Raspberry Pi 1 with response time under a second (tested with 150 feeds, 22k articles)
-* A web server: Apache2 (recommended), nginx, lighttpd (not tested on others)
-* PHP 7.0+
-	* Required extensions: [cURL](https://www.php.net/curl), [DOM](https://www.php.net/dom), [JSON](https://www.php.net/json), [XML](https://www.php.net/xml), [session](https://www.php.net/session), [ctype](https://www.php.net/ctype), and [PDO_MySQL](https://www.php.net/pdo-mysql) or [PDO_SQLite](https://www.php.net/pdo-sqlite) or [PDO_PGSQL](https://www.php.net/pdo-pgsql)
-	* Recommended extensions: [GMP](https://www.php.net/gmp) (for API access on 32-bit platforms), [IDN](https://www.php.net/intl.idn) (for Internationalized Domain Names), [mbstring](https://www.php.net/mbstring) (for Unicode strings), [iconv](https://www.php.net/iconv) (for charset conversion), [ZIP](https://www.php.net/zip) (for import/export), [zlib](https://www.php.net/zlib) (for compressed feeds)
-* MySQL 5.5.3+ or MariaDB equivalent, or SQLite 3.7.4+, or PostgreSQL 9.5+
+Configure Lighttpd web-server
 
+We need to tell lighttpd to publish our FreshRSS install as a website, but the lighttpd config file (/etc/lighttpd/lighttpd.conf) is automatically overwritten at install/update by pi-hole.. so any change we make there will be lost on the next update.
 
-# Releases
+Thankfully we can write our config in another file that lighttpd will pick up, the external.conf file (/etc/lighttpd/external.conf): this file is untouched by pi-hole during install/update.
 
-The latest stable release can be found [here](https://github.com/FreshRSS/FreshRSS/releases/latest). New versions are released every two to three months.
+There is also something else to consider: if you have pi-hole install then you know visiting your pi local ip will show you the admin page for pi-hole, this means port 80 of lighttpd is publishing pi-hole, so to keep it simple we will use another port for FreshRSS, any will do, just stay out of the common ports (=<1023) or double check you are not taking up something on this list and you will be fine. I’m using port 2000 for this example.
 
-If you want a rolling release with the newest features, or want to help testing or developing the next stable version, you can use [the `edge` branch](https://github.com/FreshRSS/FreshRSS/tree/edge/).
+To edit external.conf
 
+sudo nano /etc/lighttpd/external.conf
 
-# [Installation](https://freshrss.github.io/FreshRSS/en/admins/03_Installation.html)
+Once inside, type this and then save.
 
-## Automated install
+# FreshRSS config
 
-* [![Docker](https://www.docker.com/sites/default/files/horizontal.png)](./Docker/)
-* [![YunoHost](https://install-app.yunohost.org/install-with-yunohost.png)](https://install-app.yunohost.org/?app=freshrss)
-* [![Cloudron](https://cloudron.io/img/button.svg)](https://cloudron.io/button.html?app=org.freshrss.cloudronapp)
+$SERVER["socket"] == ":2000" {
+    server.document-root     = "/var/www/html/freshrss/p"
+}
 
-## Manual install
+We just told lighttpd to take whatever is in the folder /p and publish it on port 2000, little problem: folder /p is not there yet, we need to link it. Also, until we restart the service/pi, lighttpd doesn’t know we changed the config, keep that in mind.
 
-1. Get FreshRSS with git or [by downloading the archive](https://github.com/FreshRSS/FreshRSS/archive/latest.zip)
-2. Put the application somewhere on your server (expose only the `./p/` folder to the Web)
-3. Add write access to the `./data/` folder for the webserver user
-4. Access FreshRSS with your browser and follow the installation process
-	* or use the [Command-Line Interface](cli/README.md)
-5. Everything should be working :) If you encounter any problems, feel free to [contact us](https://github.com/FreshRSS/FreshRSS/issues).
-6. Advanced configuration settings can be found in [config.default.php](config.default.php) and modified in `data/config.php`.
-7. When using Apache, enable [`AllowEncodedSlashes`](https://httpd.apache.org/docs/trunk/mod/core.html#allowencodedslashes) for better compatibility with mobile clients.
+If you read the FreshRSS documentation, /p is the only folder you want to expose on the web server as other folders have personal data – this install is local only so not much of a problem if you mess up, but is always best to follow best practices.
 
-More detailed information about installation and server configuration can be found in [our documentation](https://freshrss.github.io/FreshRSS/en/admins/03_Installation.html).
+Configure FreshRSS
 
-## Advice
+Linking /p to the web server folder is easy, if you have followed along with the folder I used, you can copy this
 
-* For better security, expose only the `./p/` folder to the Web.
-	* Be aware that the `./data/` folder contains all personal data, so it is a bad idea to expose it.
-* The `./constants.php` file defines access to the application folder. If you want to customize your installation, look here first.
-* If you encounter any problem, logs are accessible from the interface or manually in `./data/users/*/log*.txt` files.
-	* The special folder `./data/users/_/` contains the part of the logs that are shared by all users.
+sudo ln -s /srv/FreshRSS/p /var/www/html/freshrss
 
+Linux is case sensitive, so make sure you get the right capitalisation – using the Tab key while in the terminal to autocomplete is the best approach.
 
-# F.A.Q.
+The web server user account (www-data, in the www-data group) needs access to the FreshRSS folder in order to work with it: read permission for the whole folder and write for the /data folder.
 
-* The date and time in the right-hand column is the date declared by the feed, not the time at which the article was received by FreshRSS, and it is not used for sorting.
-	* In particular, when importing a new feed, all of its articles will appear at the top of the feed list regardless of their declared date.
+If you want to check what user is assigned to the web server, check the /etc/lighttpd/lithtpd.conf file, specifically server.username and server.groupname: if you have the pi-hole conf it will be www-data for both.
 
+cd /srv/FreshRSS
+sudo chown -R www-data:www-data .
+sudo cmod -R g+r .
+sudo cmod -R g+w ./data
 
-# Extensions
+Configure cron job to update the feeds
 
-FreshRSS supports further customizations by adding extensions on top of its core functionality.
-See the [repository dedicated to those extensions](https://github.com/FreshRSS/Extensions).
+All well and good we are getting FreshRSS installed, but if it is not pulling RSS updates automatically, then what is the point?
 
+To do that we need to a create a cron job for sudo, first open the crontab for sudo
 
-# APIs & native apps
+sudo crontab -e
 
-FreshRSS supports access from mobile / native apps for Linux, Android, iOS, and OS X, via two distinct APIs:
-[Google Reader API](https://freshrss.github.io/FreshRSS/en/users/06_Mobile_access.html) (best),
-and [Fever API](https://freshrss.github.io/FreshRSS/en/users/06_Fever_API.html) (limited features and less efficient).
+Then copy in the below code to: run the php actualize_script every 15 minutes for the www-data user and write a log of the script running (or failing) at /tmp/FreshRSS.log – this is all on one line.
 
-| App                                                                                   | Platform    | Free Software                                                 | Maintained & Developed | API              | Works offline | Fast sync | Fetch more in individual views | Fetch read articles | Favourites | Labels | Podcasts | Manage feeds |
-|:--------------------------------------------------------------------------------------|:-----------:|:-------------------------------------------------------------:|:----------------------:|:----------------:|:-------------:|:---------:|:------------------------------:|:-------------------:|:----------:|:------:|:--------:|:------------:|
-| [News+](https://play.google.com/store/apps/details?id=com.noinnion.android.newsplus) with [Google Reader extension](https://github.com/noinnion/newsplus/blob/master/apk/GoogleReaderCloneExtension_101.apk) | Android | [Partially](https://github.com/noinnion/newsplus/blob/master/extensions/GoogleReaderCloneExtension/src/com/noinnion/android/newsplus/extension/google_reader/) | 2015       | GReader | ✔️             | ⭐⭐⭐       | ✔️                    | ✔️                 | ✔️         | ✔️     | ✔️       | ✔️           |
-| [FeedMe](https://play.google.com/store/apps/details?id=com.seazon.feedme)             | Android     | ➖                                                            | ✔️✔️                   | GReader          | ✔️            | ⭐⭐        | ➖                             | ➖                  | ✔️         | ✓     | ✔️       | ✔️           |
-| [RSS Guard](https://github.com/martinrotter/rssguard) | Windows, GNU/Linux, MacOS, OS/2 | ✔️ | ✔️✔️ | GReader | ✔️ | ⭐ | ➖ | ✔️ | ✔️ | ✔️ | ✔️ | ➖ |
-| [EasyRSS](https://github.com/Alkarex/EasyRSS)                                         | Android     | [✔️](https://github.com/Alkarex/EasyRSS)                      | ✔️                     | GReader          | Bug           | ⭐⭐        | ➖                             | ➖                  | ✔️         | ➖     | ➖       | ➖           |
-| [Readrops](https://github.com/readrops/Readrops)                                      | Android     | [✔️](https://github.com/readrops/Readrops)                    | ✔️✔️                   | GReader          | ✔️            | ⭐⭐⭐       | ➖                             | ➖                  | ➖         | ➖     | ➖       | ✔️           |
-| [FocusReader](https://play.google.com/store/apps/details?id=allen.town.focus.reader)  | Android     | ➖                                                            | ✔️✔️                   | GReader          | ✔️            | ⭐⭐⭐       | ➖                             | ➖                  | ✔️         | ➖     | ✓       | ✔️           |
-| [ChristopheHenry](https://git.feneas.org/christophehenry/freshrss-android)            | Android     | [✔️](https://git.feneas.org/christophehenry/freshrss-android) | Work in progress       | GReader          | ✔️            | ⭐⭐        | ➖                             | ✔️                  | ✔️         | ➖     | ➖       | ➖           |
-| [Fluent Reader](https://hyliu.me/fluent-reader/)                             | Windows, Linux, MacOS| [✔️](https://github.com/yang991178/fluent-reader)             | ✔️✔️                   | Fever            | ✔️            | ⭐         | ➖                             | ✔️                  | ✔️         | ➖     | ➖       | ➖           |
-| [FeedReader](https://jangernert.github.io/FeedReader/)                                | GNU/Linux   | [✔️](https://jangernert.github.io/FeedReader/)                | ✔️                     | GReader          | ✔️            | ⭐⭐        | ➖                             | ✔️                  | ✔️         | ➖     | ✔️       | ✔️           |
-| [NewsFlash](https://gitlab.com/news-flash/news_flash_gtk)                             | GNU/Linux   | [✔️](https://gitlab.com/news-flash/news_flash_gtk)            | Work in progress       | Fever, GReader   | ➖            | ❔        | ❔                             | ❔                  | ❔         | ❔     | ❔       | ❔           |
-| [Newsboat 2.24+](https://newsboat.org/)                                 | GNU/Linux, MacOS, FreeBSD | [✔️](https://github.com/newsboat/newsboat/)                   | ✔️✔️                   | GReader          | ➖            | ⭐        | ➖                             | ✔️                  | ✔️         | ➖     | ✔️       | ➖           |
-| [Vienna RSS](http://www.vienna-rss.com/)                                              | MacOS       | [✔️](https://github.com/ViennaRSS/vienna-rss)                 | ✔️✔️                   | GReader          | ❔            | ❔        | ❔                             | ❔                  | ❔         | ❔     | ❔       | ❔           |
-| [Reeder*](https://www.reederapp.com/)                                                  | iOS, MacOS  | ➖                                                            | ✔️✔️                   | GReader, Fever   | ✔️            | ⭐⭐⭐       | ➖                             | ✔️                  | ✔️         | ➖     | ➖       | ✔️           |
-| [Unread](https://apps.apple.com/app/unread-2/id1363637349)                            | iOS         | ➖                                                            | ✔️✔️                   | Fever            | ✔️            | ❔        | ❔                             | ❔                  | ✔️         | ➖     | ➖       | ➖           |
-| [Fiery Feeds](https://apps.apple.com/app/fiery-feeds-rss-reader/id1158763303)         | iOS         | ➖                                                            | ✔️✔️                   | Fever            | ❔            | ❔        | ❔                             | ❔                  | ❔         | ➖     | ➖       | ➖           |
-| [Readkit](https://apps.apple.com/app/readkit/id588726889)                             | MacOS       | ➖                                                            | ✔️✔️                   | Fever            | ✔️            | ❔        | ❔                             | ❔                  | ❔         | ➖     | ➖       | ➖           |
-| [Netnewswire](https://ranchero.com/netnewswire/)                                      | iOS, MacOS  | [✔️](https://github.com/Ranchero-Software/NetNewsWire)        | Work in progress       | GReader          | ✔️            | ❔        | ❔                             | ❔                  | ✔️         | ➖     | ❔       | ✔️           |
+You can change the sintax if you want, plenty of resources online to learn it.
 
-\* Install and enable the [GReader Redate extension](https://github.com/javerous/freshrss-greader-redate) to have the correct publication date for feed articles if you are using Reeder.
+*/15 * * * * sudo -u www-data php -f /srv/FreshRSS/app/actualize_script.php > /tmp/FreshRSS.log 2>&1
 
-# Included libraries
+First run
 
-* [SimplePie](https://simplepie.org/)
-* [MINZ](https://github.com/marienfressinaud/MINZ)
-* [php-http-304](https://alexandre.alapetite.fr/doc-alex/php-http-304/)
-* [jQuery](https://jquery.com/)
-* [lib_opml](https://github.com/marienfressinaud/lib_opml)
-* [flotr2](http://www.humblesoftware.com/flotr2)
-* [PHPMailer](https://github.com/PHPMailer/PHPMailer)
+Ok, time to restart lighttpd and check we are running
 
-## Only for some options or configurations
+sudo /etc/init.d/lghttpd restart
 
-* [bcrypt.js](https://github.com/dcodeIO/bcrypt.js)
-* [phpQuery](https://github.com/phpquery/phpquery)
+Now open a browser with access to the raspberry pi lan, and if all is well, typing http://raspberrypi_ipaddress:2000 will show FreshRSS
 
-[travis-badge]:https://travis-ci.org/FreshRSS/FreshRSS.svg?branch=edge
-[travis-link]:https://travis-ci.org/FreshRSS/FreshRSS
+Next steps
+
+From there you can configure your user and feeds.
+
+I will run this locally for a while and see if I want to publish it online to gain access while away from home, another option is to open a VPN so that you can access this resource while away.. I’m still undecided.
+
+To configure a client reader, like Reeder 5, you will need to enale the API access and probably setup a password too, I found some issues with the latest version fo FreshRSS and Reeder 5, probably because I’m not using a secure connection between the two, so I downgraded FreshRSS to a previous version and use the old auth method which works just fine.

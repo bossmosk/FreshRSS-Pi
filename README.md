@@ -33,13 +33,13 @@ sudo apt install php php-curl php-gmp php-intl php-mbstring php-sqlite3 php-xml 
 
 Side note, if you want to check what is already installed for php before running the line above, run this
 
-dpkg --get-selections | grep -e php
+`./ dpkg --get-selections | grep -e php /`
 
 Ok, prep done mostly, once you launch FreshRSS for the first time it will check for dependencies, you might need to install something new.. it is in active development thankfully!
 
 Time for FreshRSS, I’m going to download the git master branch in /srv/
 
-cd /srv/ && sudo git clone https://github.com/FreshRSS/FreshRSS.git
+`./ cd /srv/ && sudo git clone https://github.com/FreshRSS/FreshRSS.git /`
 
 Configure Lighttpd web-server
 

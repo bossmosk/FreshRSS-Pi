@@ -25,21 +25,21 @@ Downloading
 
 Let’s get started with updating the system first (you might want to do a reboot if it has been a while since you updated, just saying).
 
-sudo apt-get update && sudo apt-get dist-upgrade
+`sudo apt-get update && sudo apt-get dist-upgrade`
 
 Get all the software we need from the repo (you should have most of the php packages from the pi-hole install anyways)
 
-sudo apt install php php-curl php-gmp php-intl php-mbstring php-sqlite3 php-xml php-zip
+`sudo apt install php php-curl php-gmp php-intl php-mbstring php-sqlite3 php-xml php-zip`
 
 Side note, if you want to check what is already installed for php before running the line above, run this
 
-`./ dpkg --get-selections | grep -e php /`
+` dpkg --get-selections | grep -e php `
 
 Ok, prep done mostly, once you launch FreshRSS for the first time it will check for dependencies, you might need to install something new.. it is in active development thankfully!
 
 Time for FreshRSS, I’m going to download the git master branch in /srv/
 
-`./ cd /srv/ && sudo git clone https://github.com/FreshRSS/FreshRSS.git /`
+` cd /srv/ && sudo git clone https://github.com/FreshRSS/FreshRSS.git `
 
 Configure Lighttpd web-server
 
@@ -51,7 +51,7 @@ There is also something else to consider: if you have pi-hole install then you k
 
 To edit external.conf
 
-sudo nano /etc/lighttpd/external.conf
+`sudo nano /etc/lighttpd/external.conf`
 
 Once inside, type this and then save.
 
@@ -69,7 +69,7 @@ Configure FreshRSS
 
 Linking /p to the web server folder is easy, if you have followed along with the folder I used, you can copy this
 
-sudo ln -s /srv/FreshRSS/p /var/www/html/freshrss
+`sudo ln -s /srv/FreshRSS/ /var/www/html/freshrss`
 
 Linux is case sensitive, so make sure you get the right capitalisation – using the Tab key while in the terminal to autocomplete is the best approach.
 
@@ -77,10 +77,10 @@ The web server user account (www-data, in the www-data group) needs access to th
 
 If you want to check what user is assigned to the web server, check the /etc/lighttpd/lithtpd.conf file, specifically server.username and server.groupname: if you have the pi-hole conf it will be www-data for both.
 
-cd /srv/FreshRSS
-sudo chown -R www-data:www-data .
-sudo cmod -R g+r .
-sudo cmod -R g+w ./data
+`cd /srv/FreshRSS`
+`sudo chown -R www-data:www-data .`
+`sudo chmod -R g+r .`
+`sudo chmod -R g+w ./data`
 
 Configure cron job to update the feeds
 
@@ -88,19 +88,20 @@ All well and good we are getting FreshRSS installed, but if it is not pulling RS
 
 To do that we need to a create a cron job for sudo, first open the crontab for sudo
 
-sudo crontab -e
+`sudo crontab -e`
 
 Then copy in the below code to: run the php actualize_script every 15 minutes for the www-data user and write a log of the script running (or failing) at /tmp/FreshRSS.log – this is all on one line.
 
 You can change the sintax if you want, plenty of resources online to learn it.
 
-*/15 * * * * sudo -u www-data php -f /srv/FreshRSS/app/actualize_script.php > /tmp/FreshRSS.log 2>&1
+*/15 * * * * 
+sudo -u www-data php -f /srv/FreshRSS/app/actualize_script.php > /tmp/FreshRSS.log 2>&1
 
 First run
 
 Ok, time to restart lighttpd and check we are running
 
-sudo /etc/init.d/lghttpd restart
+`sudo /etc/init.d/lighttpd restart`
 
 Now open a browser with access to the raspberry pi lan, and if all is well, typing http://raspberrypi_ipaddress:2000 will show FreshRSS
 
